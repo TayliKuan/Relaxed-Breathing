@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自律神經恢復指南 - 音頻合成版</title>
+    <style>
+        :root {
+            --primary-teal: #008080;
+            --bg: #F0F9FA;
+        }
+
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            align-items: center;
+        }
+
+        header {
+            background: white;
+            width: 100%;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 20px;
+            color: var(--primary-teal);
+        }
+
+        /* 導覽頁籤 */
+        .tab-nav {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: 2px solid var(--primary-teal);
+            color: var(--primary-teal);
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .tab-btn.active {
+            background: var(--primary-teal);
+            color: white;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            overflow-y: auto;
+            /* 允許內容滾動 */
+            padding-bottom: 20px;
+        }
+
+        .content-page {
+            display: none;
+            /* 預設隱藏 */
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            animation: fadeIn 0.5s;
+        }
+
+        .content-page.active-page {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* 呼吸動畫 */
+        .circle {
+            width: 150px;
+            height: 150px;
+            background-color: rgba(0, 128, 128, 0.15);
+            border: 3px solid var(--primary-teal);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-teal);
+            animation: breathe 16s infinite ease-in-out;
+            margin-top: 30px;
+        }
+
+        @keyframes breathe {
+
+            0%,
+            100% {
+                width: 140px;
+                height: 140px;
+                box-shadow: 0 0 20px rgba(0, 128, 128, 0.1);
+            }
+
+            50% {
+                width: 280px;
+                height: 280px;
+                box-shadow: 0 0 50px rgba(0, 128, 128, 0.3);
+            }
+        }
+
+        .breath-status::after {
+            content: "吸氣";
+            animation: statusText 16s infinite;
+        }
+
+        @keyframes statusText {
+
+            0%,
+            45%,
+            100% {
+                content: "吸氣";
+            }
+
+            50%,
+            95% {
+                content: "吐氣";
+            }
+        }
+
+        .control-panel {
+            margin-top: 50px;
+            text-align: center;
+        }
+
+        .btn-audio {
+            background: var(--primary-teal);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 30px;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 128, 128, 0.3);
+            transition: 0.3s;
+        }
+
+        .btn-audio.active {
+            background: #cc3300;
+        }
+
+        .info-text {
+            margin-top: 20px;
+            color: #666;
+            font-size: 14px;
+            max-width: 80%;
+            text-align: center;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        /* 恢復建議卡片樣式 */
+        .guide-card {
+            background: white;
+            width: 85%;
+            max-width: 500px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border-left: 5px solid var(--primary-teal);
+        }
+
+        .guide-card h3 {
+            margin-top: 0;
+            color: var(--primary-teal);
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .guide-card p {
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 0;
+            font-size: 15px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>自律神經恢復指南</h1>
+    </header>
+
+    <div class="main-content">
+        <!-- 分頁導覽 -->
+        <div class="tab-nav">
+            <button class="tab-btn active" onclick="switchTab('practice')">呼吸練習</button>
+            <button class="tab-btn" onclick="switchTab('guide')">恢復建議</button>
+        </div>
+
+        <!-- 頁面 1: 呼吸練習 -->
+        <div id="practice-page" class="content-page active-page">
+            <div class="circle">
+                <span class="breath-status"></span>
+            </div>
+
+            <div class="control-panel">
+                <button id="audioBtn" class="btn-audio" onclick="toggleAudio()">開啟原創療癒音頻</button>
+
+                <!-- 模式選擇 -->
+                <div style="margin-top: 15px;">
+                    <label style="color: var(--primary-teal);">聲音模式：</label>
+                    <select onchange="switchMode(this.value)"
+                        style="padding: 5px; border-radius: 5px; border: 1px solid var(--primary-teal); color: var(--primary-teal); font-weight: bold;">
+                        <option value="sine">🎵 舒緩純音 (可調頻率)</option>
+                        <option value="ocean">🌊 療癒海浪 (生成模擬)</option>
+                        <option value="bowl">🧘 頌缽共振 (泛音疊加)</option>
+                    </select>
+                </div>
+
+                <div id="freq-control-area"
+                    style="margin-top: 20px; display: flex; flex-direction: column; align-items: center;">
+                    <label for="freqSlider" style="color: var(--primary-teal); font-size: 14px; margin-bottom: 5px;">
+                        頻率調整: <span id="freqDisplay">432</span> Hz
+                    </label>
+                    <input type="range" id="freqSlider" min="200" max="1000" value="432" step="1"
+                        oninput="updateFreq(this.value)" style="width: 200px; cursor: pointer;">
+                </div>
+
+                <div id="status" style="margin-top: 10px; font-size: 12px; color: var(--primary-teal);">目前狀態：靜音</div>
+            </div>
+
+            <div class="info-text">
+                這不是錄音，而是由程式即時生成的 <b>432Hz 舒緩波</b>。<br>
+                聲音會隨著圓圈擴大而微增，幫助大腦進入深度放鬆狀態。
+            </div>
+        </div>
+
+        <!-- 頁面 2: 恢復建議 -->
+        <div id="guide-page" class="content-page">
+            <div style="font-size: 22px; margin-bottom: 20px; font-weight: bold; color: #2C4F4F; margin-top:10px;">
+                日常恢復建議</div>
+
+            <div class="guide-card">
+                <h3>☕ 飲食建議</h3>
+                <p>遠離咖啡因、酒精與高糖。多攝取 Omega-3（魚油）、維生素 B 群與鎂，幫助神經放鬆。</p>
+            </div>
+
+            <div class="guide-card">
+                <h3>🌙 睡眠規律</h3>
+                <p>建立睡前儀式感。嘗試在 23:00 前躺平，關閉電子產品螢幕，改看實體書或聽白噪音。</p>
+            </div>
+
+            <div class="guide-card">
+                <h3>🚶 溫和運動</h3>
+                <p>避免高強度重訓以免過度刺激交感神經。推薦每日早晚步行 15 分鐘，或進行陰瑜珈伸展。</p>
+            </div>
+
+            <div class="guide-card">
+                <h3>🧠 心理建設</h3>
+                <p>失調是身體在發出「需要休息」的警訊。不與症狀對抗，接受它的存在，它是可以康復的。</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 分頁切換功能
+        function switchTab(tab) {
+            // 隱藏所有頁面
+            document.querySelectorAll('.content-page').forEach(page => {
+                page.classList.remove('active-page');
+            });
+
+            // 移除按鈕 active 樣式
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // 顯示目標頁面與按鈕樣式
+            if (tab === 'practice') {
+                document.getElementById('practice-page').classList.add('active-page');
+                document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
+            } else {
+                document.getElementById('guide-page').classList.add('active-page');
+                document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
+            }
+        }
+
+        let audioCtx;
+        let mainGain;
+        let activeNodes = []; // 儲存目前播放的所有 AudioNodes，方便清除
+        let isPlaying = false;
+        let loopTimer;
+
+        const MODES = {
+            SINE: 'sine',
+            OCEAN: 'ocean',
+            BOWL: 'bowl'
+        };
+        let currentMode = MODES.SINE;
+
+        function initAudio() {
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            mainGain = audioCtx.createGain();
+            mainGain.connect(audioCtx.destination);
+        }
+
+        // 產生白噪音 Buffer (White Noise)
+        function createNoiseBuffer() {
+            if (!audioCtx) return null;
+            const bufferSize = audioCtx.sampleRate * 2;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                output[i] = Math.random() * 2 - 1;
+            }
+            return buffer;
+        }
+
+        function switchMode(mode) {
+            currentMode = mode;
+            const sliderContainer = document.getElementById('freq-control-area');
