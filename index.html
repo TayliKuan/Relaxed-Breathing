@@ -323,9 +323,27 @@
 
         function initAudio() {
             if (audioCtx) return;
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+            // 建立 AudioContext with explicit options if needed
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+
             mainGain = audioCtx.createGain();
             mainGain.connect(audioCtx.destination);
+
+            // Mobile Unlock Event
+            function unlockAudio() {
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume().then(() => {
+                        console.log('AudioContext resumed!');
+                        document.removeEventListener('touchstart', unlockAudio);
+                        document.removeEventListener('click', unlockAudio);
+                    });
+                }
+            }
+
+            document.addEventListener('touchstart', unlockAudio);
+            document.addEventListener('click', unlockAudio);
         }
 
         // 產生白噪音 Buffer (White Noise)
@@ -343,3 +361,179 @@
         function switchMode(mode) {
             currentMode = mode;
             const sliderContainer = document.getElementById('freq-control-area');
+            const infoText = document.querySelector('.info-text');
+
+            if (mode === MODES.SINE) {
+                sliderContainer.style.display = 'flex';
+                infoText.innerHTML = `程式即時生成的 <b>舒緩波</b>。<br>聲音會隨著圓圈擴大而微增，幫助大腦放鬆。`;
+            } else if (mode === MODES.OCEAN) {
+                sliderContainer.style.display = 'none';
+                infoText.innerHTML = `程式模擬的 <b>海浪聲</b>。<br>配合呼吸模擬浪潮拍岸的頻率變化。`;
+            } else if (mode === MODES.BOWL) {
+                sliderContainer.style.display = 'none';
+                infoText.innerHTML = `程式模擬的 <b>頌缽共振</b>。<br>多個音頻疊加產生的泛音共振，適合深度冥想。`;
+            }
+
+            if (isPlaying) {
+                stopSound();
+                setTimeout(startSound, 150);
+            }
+        }
+
+        async function toggleAudio() { // Marked as async
+            try {
+                if (!audioCtx) initAudio();
+
+                // Explicitly resume context for mobile browsers
+                if (audioCtx.state === 'suspended') {
+                    await audioCtx.resume();
+                }
+
+                const btn = document.getElementById('audioBtn');
+                const status = document.getElementById('status');
+
+                if (!isPlaying) {
+                    isPlaying = true;
+                    btn.innerText = "關閉音頻";
+                    btn.classList.add('active');
+                    status.innerText = "音頻啟動中...";
+                    startSound();
+                    loopAudio();
+                } else {
+                    isPlaying = false;
+                    btn.innerText = "開啟原創療癒音頻";
+                    btn.classList.remove('active');
+                    status.innerText = "目前狀態：靜音";
+                    stopSound();
+                    clearTimeout(loopTimer);
+                }
+            } catch (err) {
+                console.error("Audio playback error:", err);
+                alert("音頻啟動失敗，請確認您的瀏覽器設定或重新整理。");
+            }
+        }
+
+        function startSound() {
+            if (!isPlaying) return;
+            const now = audioCtx.currentTime;
+
+            // 清除舊節點
+            activeNodes.forEach(node => {
+                try { node.stop(); } catch (e) { }
+                try { node.disconnect(); } catch (e) { }
+            });
+            activeNodes = [];
+
+            mainGain.gain.cancelScheduledValues(now);
+            mainGain.gain.setValueAtTime(0, now);
+
+            if (currentMode === MODES.SINE) {
+                const freq = document.getElementById('freqSlider').value;
+                let osc = audioCtx.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, now);
+                osc.connect(mainGain);
+                osc.start();
+                activeNodes.push(osc);
+                document.getElementById('status').innerText = `目前狀態：${freq}Hz 共振中...`;
+
+            } else if (currentMode === MODES.OCEAN) {
+                // 海浪模式
+                let buffer = createNoiseBuffer();
+                let src = audioCtx.createBufferSource();
+                src.buffer = buffer;
+                src.loop = true;
+                let filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.Q.value = 1;
+                src.connect(filter);
+                filter.connect(mainGain);
+                src.start();
+
+                // 存入 activeNodes 以便稍後控制 filter
+                src.filterNode = filter;
+                activeNodes.push(src);
+                document.getElementById('status').innerText = `目前狀態：海浪模擬中...`;
+
+            } else if (currentMode === MODES.BOWL) {
+                // 頌缽
+                let freqs = [180, 180 * 1.42, 180 * 2.3];
+                freqs.forEach(f => {
+                    let osc = audioCtx.createOscillator();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(f, now);
+                    let g = audioCtx.createGain();
+                    g.gain.value = 0.3; // 混合音量
+                    osc.connect(g);
+                    g.connect(mainGain);
+                    osc.start();
+                    activeNodes.push(osc);
+                });
+                document.getElementById('status').innerText = `目前狀態：頌缽共振中...`;
+            }
+        }
+
+        function stopSound() {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+            mainGain.gain.cancelScheduledValues(now);
+            mainGain.gain.setTargetAtTime(0, now, 0.5);
+
+            setTimeout(() => {
+                if (!isPlaying) {
+                    activeNodes.forEach(n => {
+                        try { n.stop(); } catch (e) { }
+                        try { n.disconnect(); } catch (e) { }
+                    });
+                    activeNodes = [];
+                }
+            }, 1000);
+        }
+
+        function loopAudio() {
+            if (!isPlaying) return;
+            const now = audioCtx.currentTime;
+            mainGain.gain.cancelScheduledValues(now);
+
+            // 調整為 16秒 呼吸循環 (8秒吸, 8秒吐)
+            if (currentMode === MODES.SINE || currentMode === MODES.BOWL) {
+                // 純音 & 頌缽：明顯的音量起伏
+                mainGain.gain.setValueAtTime(0.01, now);
+                mainGain.gain.linearRampToValueAtTime(0.15, now + 8);
+                mainGain.gain.linearRampToValueAtTime(0.01, now + 16);
+
+            } else if (currentMode === MODES.OCEAN) {
+                // 海浪：音量變化 + 濾波器掃描
+                mainGain.gain.setValueAtTime(0.02, now);
+                mainGain.gain.linearRampToValueAtTime(0.15, now + 8);
+                mainGain.gain.linearRampToValueAtTime(0.02, now + 16);
+
+                let filter = activeNodes[0]?.filterNode;
+                if (filter) {
+                    filter.frequency.cancelScheduledValues(now);
+                    filter.frequency.setValueAtTime(300, now);
+                    filter.frequency.exponentialRampToValueAtTime(1200, now + 7);
+                    filter.frequency.exponentialRampToValueAtTime(300, now + 16);
+                }
+            }
+
+            // 16 秒迴圈
+            loopTimer = setTimeout(loopAudio, 16000);
+        }
+
+        function updateFreq(val) {
+            document.getElementById('freqDisplay').innerText = val;
+            if (currentMode === MODES.SINE && isPlaying) {
+                // 只有純音模式需要即時更新 Oscillator
+                activeNodes.forEach(node => {
+                    if (node instanceof OscillatorNode && node.type === 'sine') {
+                        node.frequency.setValueAtTime(val, audioCtx.currentTime);
+                    }
+                });
+            }
+        }
+    </script>
+
+</body>
+
+</html>
